@@ -1,4 +1,4 @@
-# Podcast Whisperer
+# Media Whisperer
 
 The goal of this project is to automatically download a feed to consume the latest information and compile it into a digestable format either as a quick notes page or as a easy to listen to podcast.
 
@@ -10,3 +10,25 @@ Rather than consuming it all individually, I plan to scoop up the content once a
 
 ## The Plan
 
+### Extract
+
+- [ ] Download Podcast Script
+- [ ] Download YouTube Videos Script
+
+### Transform
+
+- [ ] Convert Audio/Video into Text
+- [ ] Compile Transformed Text into Notes
+- [ ] Convert Notes into Plain Text
+
+### Load
+
+- [ ] Convert Plain Text into Podcast
+
+## The Tools
+
+OpenAI Whisper
+ChatGPT
+LLama2
+youtube-dl
+ElevenLabs
