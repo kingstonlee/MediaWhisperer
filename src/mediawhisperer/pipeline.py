@@ -45,7 +45,13 @@ class Pipeline:
         )
         self.voice = get_voice(config.backends.tts, **config.backends.options)
 
-    def run(self) -> RunResult:
+    def run(self, force: bool = False) -> RunResult:
+        """Compile a digest.
+
+        ``force`` re-includes items already surfaced in a previous digest;
+        otherwise (the daily-run default) only genuinely new items appear.
+        """
+        skip_seen = self.config.skip_seen and not force
         notes: list[Note] = []
 
         for source in self.config.enabled_sources:
@@ -57,12 +63,20 @@ class Pipeline:
                 logger.exception("Failed to discover items for %s", source.name)
                 continue
 
-            logger.info("  discovered %d item(s)", len(items))
+            if skip_seen:
+                fresh = [it for it in items if not self.store.is_seen(it.id)]
+                skipped = len(items) - len(fresh)
+                if skipped:
+                    logger.info("  skipping %d already-digested item(s)", skipped)
+                items = fresh
+
+            logger.info("  processing %d item(s)", len(items))
             for item in items:
                 try:
                     note = self._process_item(extractor, item)
                     if note is not None:
                         notes.append(note)
+                        self.store.mark_seen(item.id)
                 except Exception:  # noqa: BLE001
                     logger.exception("  failed to process item: %s", item.title)
 

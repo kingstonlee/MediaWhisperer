@@ -33,12 +33,27 @@ real digest in seconds. Upgrade any stage when you want more quality:
 
 | Stage       | Default (offline)            | Opt-in upgrade                          |
 |-------------|------------------------------|-----------------------------------------|
-| Transcribe  | `feed` (use show notes)      | `whisper` (speech-to-text on the audio) |
+| Transcribe  | `feed` (use show notes)      | `captions` (reuse a video's subtitles), `whisper` (speech-to-text on the audio) |
 | Summarize   | `extractive` (no network)    | pluggable LLM backend (registry seam)   |
 | Text-to-speech | `script` (writes the text) | `pyttsx3` (offline audio file)          |
 
-Downloading YouTube media uses `yt-dlp`. Transcripts are cached by item, so
-re-running a feed only does new work.
+The `captions` transcriber pulls a YouTube video's existing subtitles (creator
+or auto-generated) with `yt-dlp` and skips audio processing entirely — when the
+creator already captioned the video, those captions *are* the script. It falls
+back to the feed description for uncaptioned videos.
+
+Downloading media uses `yt-dlp`. Transcripts are cached by item, so re-running a
+feed only does new work.
+
+### Only new content, every run
+
+By default a run only surfaces items it hasn't digested before (`skip_seen`), so
+a daily or weekly run gives you just what's new — no repeats. The set of already
+-digested items is tracked in the cache. To re-compile everything regardless:
+
+```bash
+mediawhisperer run -c config.yaml --force
+```
 
 ## Quick start
 

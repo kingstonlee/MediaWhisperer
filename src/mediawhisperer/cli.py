@@ -37,7 +37,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("run", parents=[common], help="Run the full extract/transform/load pipeline.")
+    run_parser = sub.add_parser(
+        "run", parents=[common], help="Run the full extract/transform/load pipeline."
+    )
+    run_parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="Re-include items already surfaced in a previous digest.",
+    )
     sub.add_parser("sources", parents=[common], help="List configured sources and exit.")
     return parser
 
@@ -64,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "sources":
         return _cmd_sources(config)
     if args.command == "run":
-        return _cmd_run(config)
+        return _cmd_run(config, force=args.force)
     return 1
 
 
@@ -77,8 +85,8 @@ def _cmd_sources(config: Config) -> int:
     return 0
 
 
-def _cmd_run(config: Config) -> int:
-    result = Pipeline(config).run()
+def _cmd_run(config: Config, force: bool = False) -> int:
+    result = Pipeline(config).run(force=force)
     print(f"Compiled {result.digest.item_count} item(s).")
     print(f"  notes:  {result.notes_path}")
     print(f"  script: {result.script_path}")

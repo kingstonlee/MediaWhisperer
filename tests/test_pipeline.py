@@ -54,8 +54,9 @@ def test_transcripts_are_cached_between_runs(tmp_path):
     cached = list(cache.glob("*.json"))
     assert len(cached) == 2  # one per processed item
 
-    # A second run should reuse the cache and still produce the digest.
-    result = Pipeline(config).run()
+    # A second (forced) run should reuse the cache and still produce the digest.
+    # force=True re-includes the now-seen items so we actually exercise reuse.
+    result = Pipeline(config).run(force=True)
     assert result.digest.item_count == 2
 
 
@@ -64,3 +65,31 @@ def test_empty_config_rejected():
 
     with pytest.raises(ValueError):
         Config.from_dict({"sources": []})
+
+
+def test_seen_items_are_skipped_on_second_run(tmp_path):
+    config = _config(tmp_path)
+
+    first = Pipeline(config).run()
+    assert first.digest.item_count == 2
+
+    # Same feed, same cache: everything has now been digested, so a plain
+    # second run yields an empty digest.
+    second = Pipeline(config).run()
+    assert second.digest.item_count == 0
+
+
+def test_force_reincludes_seen_items(tmp_path):
+    config = _config(tmp_path)
+    Pipeline(config).run()
+
+    forced = Pipeline(config).run(force=True)
+    assert forced.digest.item_count == 2
+
+
+def test_skip_seen_disabled_in_config(tmp_path):
+    config = _config(tmp_path)
+    config.skip_seen = False
+    Pipeline(config).run()
+    again = Pipeline(config).run()
+    assert again.digest.item_count == 2

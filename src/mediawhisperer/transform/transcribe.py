@@ -16,11 +16,13 @@ oblivious to which one is active.
 
 from __future__ import annotations
 
+import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 from ..models import MediaItem, Transcript
 from ..store import Store
+from .captions import parse_subtitles
 
 _REGISTRY: dict[str, type["Transcriber"]] = {}
 
@@ -111,6 +113,71 @@ class WhisperTranscriber(Transcriber):
             text=result.get("text", "").strip(),
             provenance="whisper",
         )
+
+
+@register("captions")
+class CaptionsTranscriber(Transcriber):
+    """Use a video's existing subtitles instead of transcribing its audio.
+
+    Fetches only the caption track via yt-dlp (no audio download), so it's far
+    cheaper than Whisper when captions exist. Falls back to the feed description
+    when a video has no captions, so a run never dead-ends on an uncaptioned
+    video.
+
+    Options:
+        languages: list of preferred subtitle language codes (default ["en"]).
+        allow_auto: include YouTube auto-generated captions (default True).
+    """
+
+    # Captions come from the source URL directly, not a downloaded media file.
+    needs_media = False
+
+    def transcribe(self, item: MediaItem) -> Transcript:
+        text, provenance = self._fetch_captions(item)
+        if not text:
+            text = item.summary_hint.strip() or item.title
+            provenance = "feed"
+        return Transcript(
+            item_id=item.id,
+            title=item.title,
+            source_name=item.source_name,
+            text=text,
+            provenance=provenance,
+        )
+
+    def _fetch_captions(self, item: MediaItem) -> tuple[str, str]:
+        try:
+            import yt_dlp
+        except ImportError as exc:  # pragma: no cover - optional dep
+            raise RuntimeError(
+                "yt-dlp is required for the captions transcriber. "
+                "Install it with: pip install 'mediawhisperer[youtube]'"
+            ) from exc
+
+        languages = self.options.get("languages", ["en"])
+        allow_auto = self.options.get("allow_auto", True)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            outtmpl = str(Path(tmp) / "%(id)s.%(ext)s")
+            ydl_opts = {
+                "skip_download": True,
+                "writesubtitles": True,
+                "writeautomaticsub": allow_auto,
+                "subtitleslangs": languages,
+                "subtitlesformat": "vtt",
+                "outtmpl": outtmpl,
+                "quiet": True,
+                "noprogress": True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.extract_info(item.media_url or item.url, download=True)
+
+            for path in sorted(Path(tmp).glob("*.vtt")):
+                content = path.read_text(encoding="utf-8", errors="ignore")
+                text = parse_subtitles(content, "vtt")
+                if text:
+                    return text, "captions"
+        return "", "captions"
 
 
 def cached_transcribe(transcriber: Transcriber, item: MediaItem, store: Store) -> Transcript:
