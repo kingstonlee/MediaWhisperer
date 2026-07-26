@@ -15,6 +15,10 @@ highlights_per_item: 4    # bullet-point highlights per item
 # `mediawhisperer run --force`.
 skip_seen: true
 
+# Also write a self-contained HTML version of the notes page next to the
+# Markdown one (nice for reading in a browser).
+emit_html: false
+
 # Which implementation to use for each swappable stage.
 # The defaults below run fully offline with no API keys and no model downloads.
 backends:

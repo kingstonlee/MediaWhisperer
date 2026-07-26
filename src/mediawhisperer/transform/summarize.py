@@ -23,6 +23,8 @@ import re
 from abc import ABC, abstractmethod
 
 from ..models import Note, Transcript
+from .lexicon import STOPWORDS as _STOPWORDS
+from .topics import extract_keyphrases
 
 _REGISTRY: dict[str, type["Summarizer"]] = {}
 
@@ -58,17 +60,6 @@ class Summarizer(ABC):
         ...
 
 
-# A compact English stopword list. Kept inline to avoid an NLTK download.
-_STOPWORDS = frozenset(
-    """
-    a an and are as at be been but by for from had has have he her his i in into is it
-    its no not of on or our so than that the their them they this to was we were what
-    when which who will with would you your about after all also any because can could
-    do does did just like more most much my new now one only other out over said same
-    see should some such then there these those through too under up very
-    """.split()
-)
-
 _WORD_RE = re.compile(r"[A-Za-z']+")
 # Split on sentence-ending punctuation followed by whitespace and a capital/quote.
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+(?=[\"'A-Z0-9])")
@@ -93,6 +84,7 @@ class ExtractiveSummarizer(Summarizer):
         highlights: int = 4,
     ) -> Note:
         sentences = split_sentences(transcript.text)
+        topics = extract_keyphrases(transcript.text, self.options.get("topics_per_item", 5))
 
         if len(sentences) <= summary_sentences:
             # Too short to meaningfully compress; use it verbatim.
@@ -104,6 +96,7 @@ class ExtractiveSummarizer(Summarizer):
                 url=item_url,
                 summary=summary,
                 highlights=[],
+                topics=topics,
                 published=published,
             )
 
@@ -126,6 +119,7 @@ class ExtractiveSummarizer(Summarizer):
             url=item_url,
             summary=summary,
             highlights=[b for b in bullets if b],
+            topics=topics,
             published=published,
         )
 

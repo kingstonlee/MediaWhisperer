@@ -94,6 +94,7 @@ class Note:
     url: str
     summary: str
     highlights: list[str] = field(default_factory=list)
+    topics: list[str] = field(default_factory=list)
     published: datetime | None = None
 
 

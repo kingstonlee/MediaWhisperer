@@ -17,7 +17,7 @@ from pathlib import Path
 
 from .config import Config
 from .extract import get_extractor
-from .load import get_voice, render_markdown, render_script
+from .load import get_voice, render_html, render_markdown, render_script
 from .models import Digest, Note, utcnow
 from .store import Store
 from .transform import cached_transcribe, get_summarizer, get_transcriber
@@ -31,6 +31,7 @@ class RunResult:
     notes_path: Path
     script_path: Path
     audio_path: Path | None
+    html_path: Path | None = None
 
 
 class Pipeline:
@@ -112,6 +113,11 @@ class Pipeline:
         notes_path = out / f"digest-{stamp}.md"
         notes_path.write_text(render_markdown(digest), encoding="utf-8")
 
+        html_path: Path | None = None
+        if self.config.emit_html:
+            html_path = out / f"digest-{stamp}.html"
+            html_path.write_text(render_html(digest), encoding="utf-8")
+
         script = render_script(digest)
         script_path = out / f"digest-{stamp}.script.txt"
         script_path.write_text(script, encoding="utf-8")
@@ -126,4 +132,5 @@ class Pipeline:
             notes_path=notes_path,
             script_path=script_path,
             audio_path=audio_path,
+            html_path=html_path,
         )

@@ -89,6 +89,8 @@ def _cmd_run(config: Config, force: bool = False) -> int:
     result = Pipeline(config).run(force=force)
     print(f"Compiled {result.digest.item_count} item(s).")
     print(f"  notes:  {result.notes_path}")
+    if result.html_path:
+        print(f"  html:   {result.html_path}")
     print(f"  script: {result.script_path}")
     if result.audio_path:
         print(f"  audio:  {result.audio_path}")

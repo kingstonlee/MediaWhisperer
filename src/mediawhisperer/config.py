@@ -45,6 +45,8 @@ class Config:
     summary_sentences: int = 3
     # Skip items already surfaced in a previous digest (the daily-run default).
     skip_seen: bool = True
+    # Also write a self-contained HTML version of the notes page.
+    emit_html: bool = False
 
     @classmethod
     def load(cls, path: str | Path) -> "Config":
@@ -73,6 +75,7 @@ class Config:
             highlights_per_item=int(raw.get("highlights_per_item", 4)),
             summary_sentences=int(raw.get("summary_sentences", 3)),
             skip_seen=bool(raw.get("skip_seen", True)),
+            emit_html=bool(raw.get("emit_html", False)),
         )
 
     @property

@@ -17,13 +17,23 @@ file, and each run walks them end to end:
  discover → (download) → transcribe → summarize → compile → render
 ```
 
-The output of a run is two deliverables, both built from the same digest so the
-written and spoken versions never drift apart:
+The output of a run is a set of deliverables, all built from the same digest so
+the written and spoken versions never drift apart:
 
 - **`digest-YYYY-MM-DD.md`** — a skimmable notes page, grouped by source, with a
-  short summary and highlight bullets per item.
+  short summary, highlight bullets, and topic tags per item.
 - **`digest-YYYY-MM-DD.script.txt`** — a listen-ready narration script that a
   voice backend can turn into your own daily audio briefing.
+- **`digest-YYYY-MM-DD.html`** — an optional self-contained HTML page (enable
+  with `emit_html: true`).
+
+### What's everyone talking about?
+
+Each item is tagged with its own keyphrases, and those are aggregated across the
+whole run into the digest's **themes** — the topics showing up in more than one
+feed. That turns a pile of separate summaries into a single answer to "what's
+the big story across everything I follow this week?", surfaced at the top of the
+notes page and the audio intro.
 
 ### Swappable backends
 
