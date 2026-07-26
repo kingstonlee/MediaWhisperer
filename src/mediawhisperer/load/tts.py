@@ -13,6 +13,7 @@ an API key without changing any caller.
 
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -55,6 +56,59 @@ class ScriptOnlyBackend(VoiceBackend):
     def synthesize(self, script: str, dest: Path) -> Path:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(script, encoding="utf-8")
+        return dest
+
+
+@register("elevenlabs")
+class ElevenLabsBackend(VoiceBackend):
+    """Neural cloud text-to-speech via the ElevenLabs API.
+
+    Produces a natural-sounding MP3. Needs an API key, read from
+    ``options["api_key"]`` or the ``ELEVENLABS_API_KEY`` environment variable
+    (the env var is preferred so keys never live in the config file).
+
+    Options:
+        api_key:  overrides ELEVENLABS_API_KEY.
+        voice_id: ElevenLabs voice id (or ELEVENLABS_VOICE_ID env var).
+        model_id: TTS model (default "eleven_multilingual_v2").
+    """
+
+    suffix = ".mp3"
+    _ENDPOINT = "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+
+    def synthesize(self, script: str, dest: Path) -> Path:
+        import requests
+
+        api_key = self.options.get("api_key") or os.environ.get("ELEVENLABS_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "ElevenLabs needs an API key. Set ELEVENLABS_API_KEY or put "
+                "api_key under backends.options in your config."
+            )
+        voice_id = (
+            self.options.get("voice_id")
+            or os.environ.get("ELEVENLABS_VOICE_ID")
+            or "21m00Tcm4TlvDq8ikWAM"  # a default stock voice
+        )
+        model_id = self.options.get("model_id", "eleven_multilingual_v2")
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        response = requests.post(
+            self._ENDPOINT.format(voice_id=voice_id),
+            headers={
+                "xi-api-key": api_key,
+                "accept": "audio/mpeg",
+                "content-type": "application/json",
+            },
+            json={
+                "text": script,
+                "model_id": model_id,
+                "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        dest.write_bytes(response.content)
         return dest
 
 

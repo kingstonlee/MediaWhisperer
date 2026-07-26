@@ -35,6 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument(
         "-v", "--verbose", action="store_true", help="Emit progress logging."
     )
+    common.add_argument(
+        "--log-file",
+        metavar="PATH",
+        help="Append timestamped progress logs to a file (useful for cron/systemd).",
+    )
 
     parser = argparse.ArgumentParser(
         prog="mediawhisperer",
@@ -71,10 +76,7 @@ _BOOTSTRAP_COMMANDS = {"init", "import-opml"}
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    logging.basicConfig(
-        level=logging.INFO if args.verbose else logging.WARNING,
-        format="%(message)s",
-    )
+    _configure_logging(verbose=args.verbose, log_file=getattr(args, "log_file", None))
 
     config_path = Path(args.config)
 
@@ -99,6 +101,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run":
         return _cmd_run(config, force=args.force)
     return 1
+
+
+def _configure_logging(verbose: bool, log_file: str | None) -> None:
+    handlers: list[logging.Handler] = []
+    if log_file:
+        # Unattended runs: always capture INFO-level detail with timestamps.
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+        )
+        handlers.append(file_handler)
+    console = logging.StreamHandler()
+    console.setFormatter(logging.Formatter("%(message)s"))
+    handlers.append(console)
+
+    level = logging.INFO if (verbose or log_file) else logging.WARNING
+    logging.basicConfig(level=level, handlers=handlers, force=True)
 
 
 def _cmd_sources(config: Config) -> int:

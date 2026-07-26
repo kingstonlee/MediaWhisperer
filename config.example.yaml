@@ -24,12 +24,15 @@ emit_html: false
 backends:
   transcriber: feed        # feed (no audio) | captions (youtube subtitles) | whisper (speech-to-text)
   summarizer: extractive   # extractive (offline)
-  tts: script              # script (text only) | pyttsx3 (offline audio)
+  tts: script              # script (text only) | pyttsx3 (offline audio) | elevenlabs (cloud)
   options:
     model: base            # whisper model size, if transcriber: whisper
     languages: [en]        # preferred caption languages, if transcriber: captions
     allow_auto: true       # accept auto-generated captions, if transcriber: captions
     rate: 175              # words-per-minute, if tts: pyttsx3
+    # For tts: elevenlabs -- set ELEVENLABS_API_KEY in the environment (don't
+    # put secrets in this file). Optionally pin a voice:
+    voice_id: 21m00Tcm4TlvDq8ikWAM
 
 # The feeds you want compiled.
 sources:

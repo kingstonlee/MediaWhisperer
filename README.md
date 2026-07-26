@@ -45,7 +45,7 @@ real digest in seconds. Upgrade any stage when you want more quality:
 |-------------|------------------------------|-----------------------------------------|
 | Transcribe  | `feed` (use show notes)      | `captions` (reuse a video's subtitles), `whisper` (speech-to-text on the audio) |
 | Summarize   | `extractive` (no network)    | pluggable LLM backend (registry seam)   |
-| Text-to-speech | `script` (writes the text) | `pyttsx3` (offline audio file)          |
+| Text-to-speech | `script` (writes the text) | `pyttsx3` (offline audio), `elevenlabs` (neural cloud voice) |
 
 The `captions` transcriber pulls a YouTube video's existing subtitles (creator
 or auto-generated) with `yt-dlp` and skips audio processing entirely — when the
@@ -110,6 +110,32 @@ backends:
   tts: pyttsx3
   options:
     model: base   # whisper model size
+```
+
+For a neural cloud voice, use the `elevenlabs` backend and keep the key out of
+the config file via an environment variable:
+
+```yaml
+backends:
+  tts: elevenlabs
+  options:
+    voice_id: 21m00Tcm4TlvDq8ikWAM   # optional; or ELEVENLABS_VOICE_ID
+```
+
+```bash
+export ELEVENLABS_API_KEY=sk-...
+mediawhisperer run
+```
+
+## Scheduling
+
+The tool is built for unattended runs — it's resilient per item, exits cleanly,
+and (with `skip_seen` on) only compiles what's new each time. Ready-to-edit cron,
+systemd, and launchd recipes live in [`deploy/`](deploy/); use `--log-file` to
+capture timestamped progress:
+
+```bash
+mediawhisperer run -c config.yaml --log-file mediawhisperer.log
 ```
 
 ## Configuration

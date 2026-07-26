@@ -94,3 +94,13 @@ def test_cli_import_opml_is_idempotent(tmp_path):
 
 def test_cli_import_opml_missing_file(tmp_path):
     assert main(["import-opml", str(tmp_path / "nope.opml"), "-c", str(tmp_path / "c.yaml")]) == 2
+
+
+def test_cli_log_file_captures_run(tmp_path):
+    config = _write_config(tmp_path)
+    log = tmp_path / "run.log"
+    assert main(["run", "-c", str(config), "--log-file", str(log)]) == 0
+    assert log.exists()
+    contents = log.read_text(encoding="utf-8")
+    # INFO-level progress is captured with timestamps even without -v.
+    assert "Processing source" in contents

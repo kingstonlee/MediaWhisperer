@@ -1,0 +1,12 @@
+[Unit]
+Description=Run MediaWhisperer on a schedule
+Documentation=https://github.com/kingstonlee/MediaWhisperer
+
+[Timer]
+# Daily at 7:00am local time. For a weekly digest use: OnCalendar=Mon *-*-* 08:00:00
+OnCalendar=*-*-* 07:00:00
+# If the machine was off at the scheduled time, run at next boot.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
