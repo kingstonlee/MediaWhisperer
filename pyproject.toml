@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mediawhisperer"
+version = "0.1.0"
+description = "Compile your podcast and video feeds into a digest and a listen-ready script."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "feedparser>=6.0",
+    "pyyaml>=6.0",
+    "requests>=2.28",
+]
+
+[project.optional-dependencies]
+# Speech-to-text on downloaded audio (reference implementation).
+whisper = ["openai-whisper>=20231117"]
+# Faster, lighter speech-to-text (recommended free/local transcriber).
+faster-whisper = ["faster-whisper>=1.0"]
+# Downloading YouTube media / pulling captions.
+youtube = ["yt-dlp>=2024.1"]
+# Offline OS-voice text-to-speech.
+voice = ["pyttsx3>=2.90"]
+# Offline neural text-to-speech (recommended free/local voice).
+piper = ["piper-tts>=1.2"]
+# Everything, for a full local install.
+all = [
+    "faster-whisper>=1.0",
+    "openai-whisper>=20231117",
+    "yt-dlp>=2024.1",
+    "piper-tts>=1.2",
+    "pyttsx3>=2.90",
+]
+dev = ["pytest>=7.4"]
+
+# Note: the "llm" summarizer and "elevenlabs" voice backends use `requests`
+# (already a core dependency), so they need no extra install -- just an API key
+# (hosted providers) or a running Ollama (local, free).
+
+[project.scripts]
+mediawhisperer = "mediawhisperer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

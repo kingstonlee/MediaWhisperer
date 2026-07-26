@@ -1,0 +1,11 @@
+# MediaWhisperer scheduled runs (crontab).
+# Install with:  crontab deploy/crontab.example   (or paste a line into `crontab -e`)
+#
+# Adjust the paths: point to your venv's `mediawhisperer` and your config.
+# Because `skip_seen` is on by default, every run only compiles what's new.
+
+# --- Daily digest at 7:00am -------------------------------------------------
+0 7 * * *  /path/to/.venv/bin/mediawhisperer run -c /path/to/config.yaml --log-file /path/to/mediawhisperer.log
+
+# --- Or a weekly digest, Mondays at 8:00am ----------------------------------
+# 0 8 * * 1  /path/to/.venv/bin/mediawhisperer run -c /path/to/config.yaml --log-file /path/to/mediawhisperer.log

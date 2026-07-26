@@ -1,0 +1,13 @@
+[Unit]
+Description=MediaWhisperer digest run
+Documentation=https://github.com/kingstonlee/MediaWhisperer
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Edit these three to match your install.
+WorkingDirectory=%h/MediaWhisperer
+ExecStart=%h/MediaWhisperer/.venv/bin/mediawhisperer run -c %h/MediaWhisperer/config.yaml --log-file %h/MediaWhisperer/mediawhisperer.log
+# Keep going even if one feed is slow; the pipeline is resilient per-item.
+TimeoutStartSec=1800

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Test Parks Podcast</title>
+    <link>https://example.com/parks</link>
+    <description>A test feed for MediaWhisperer.</description>
+    <item>
+      <title>Galaxy's Edge Turns Five</title>
+      <link>https://example.com/parks/ep-101</link>
+      <guid>https://example.com/parks/ep-101</guid>
+      <pubDate>Mon, 02 Jun 2025 09:00:00 +0000</pubDate>
+      <itunes:duration>32:10</itunes:duration>
+      <enclosure url="https://example.com/media/ep-101.mp3" length="30000000" type="audio/mpeg"/>
+      <description><![CDATA[
+        <p>The Star Wars land Galaxy's Edge just marked its fifth anniversary. In this episode we walk through how the land has changed since opening day.
+        The Rise of the Resistance ride remains the headline attraction, and its reliability has improved dramatically over the years.
+        We also cover the new seasonal offerings at Oga's Cantina and whether the blue milk is still worth the price.
+        Fans continue to debate whether a second Star Wars land is on the horizon for the resort.
+        Finally, we share listener stories about proposing at the top of the Millennium Falcon queue.</p>
+      ]]></description>
+    </item>
+    <item>
+      <title>Marvel Day at Sea Returns</title>
+      <link>https://example.com/parks/ep-102</link>
+      <guid>https://example.com/parks/ep-102</guid>
+      <pubDate>Mon, 09 Jun 2025 09:00:00 +0000</pubDate>
+      <itunes:duration>1:05:44</itunes:duration>
+      <enclosure url="https://example.com/media/ep-102.mp3" length="60000000" type="audio/mpeg"/>
+      <description><![CDATA[
+        Marvel Day at Sea is back on the cruise line for another season.
+        The deck party featuring Spider-Man and the Avengers has been expanded with new pyrotechnics.
+        Character meet-and-greets now include several heroes that were previously exclusive to the theme parks.
+        We break down which sailings still have availability and how prices compare to last year.
+        Our verdict: for Marvel fans, this remains the single best value on the water.
+      ]]></description>
+    </item>
+    <item>
+      <title>No Audio Here</title>
+      <link>https://example.com/parks/ep-103</link>
+      <guid>https://example.com/parks/ep-103</guid>
+      <pubDate>Mon, 16 Jun 2025 09:00:00 +0000</pubDate>
+      <description>This item deliberately has no enclosure and should be skipped.</description>
+    </item>
+  </channel>
+</rss>

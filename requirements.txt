@@ -1,0 +1,9 @@
+# Core runtime dependencies (the pipeline runs end-to-end with just these).
+feedparser>=6.0
+pyyaml>=6.0
+requests>=2.28
+
+# Optional backends -- uncomment what you want to enable:
+# openai-whisper>=20231117   # whisper transcriber
+# yt-dlp>=2024.1             # youtube downloads
+# pyttsx3>=2.90             # offline text-to-speech audio

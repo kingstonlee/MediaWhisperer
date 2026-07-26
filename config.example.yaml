@@ -1,0 +1,69 @@
+# MediaWhisperer configuration.
+# Copy to config.yaml and edit. Run with: mediawhisperer run -c config.yaml
+
+# Where finished digests are written.
+output_dir: output
+# Where downloaded media and transcripts are cached between runs.
+cache_dir: .cache
+
+# How the summary of each item is shaped.
+summary_sentences: 3      # sentences kept in each item's summary
+highlights_per_item: 4    # bullet-point highlights per item
+
+# Only surface items that haven't appeared in a previous digest. This is what
+# makes a daily/weekly run show just the new stuff. Override for one run with
+# `mediawhisperer run --force`.
+skip_seen: true
+
+# Also write a self-contained HTML version of the notes page next to the
+# Markdown one (nice for reading in a browser).
+emit_html: false
+
+# Which implementation to use for each swappable stage.
+# The defaults below run fully offline with no API keys and no model downloads.
+# For the recommended free, high-quality stack, see the commented block further
+# down and the README's "Best quality for free" section.
+backends:
+  transcriber: feed        # feed | captions | whisper | faster-whisper
+  summarizer: extractive   # extractive | llm
+  tts: script              # script | pyttsx3 | piper | elevenlabs
+  options:
+    # -- transcriber options --
+    model: base            # whisper/faster-whisper model (e.g. base, small, distil-large-v3)
+    # device: cpu          # faster-whisper: cpu | cuda
+    # compute_type: int8   # faster-whisper precision (int8 = fast/low-memory)
+    languages: [en]        # preferred caption languages, if transcriber: captions
+    allow_auto: true       # accept auto-generated captions, if transcriber: captions
+
+    # -- summarizer options (transcriber: llm) --
+    # provider: ollama     # ollama (local/free) | groq | openai | gemini
+    # model: llama3.1      # override the provider's default model
+    # Hosted providers read their key from the environment:
+    #   GROQ_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY
+
+    # -- tts options --
+    rate: 175              # words-per-minute, if tts: pyttsx3
+    # For tts: piper -- point at a downloaded .onnx voice model:
+    # model: /path/to/en_US-lessac-medium.onnx
+    # For tts: elevenlabs -- set ELEVENLABS_API_KEY in the environment (don't
+    # put secrets in this file). Optionally pin a voice:
+    voice_id: 21m00Tcm4TlvDq8ikWAM
+
+# The feeds you want compiled.
+sources:
+  - name: The Disney Parks Podcast
+    kind: podcast
+    url: https://example.com/disney-parks/feed.xml
+    lookback_days: 7
+    max_items: 3
+
+  - name: A Star Wars YouTube Channel
+    kind: youtube
+    # Either a full channel feed URL or a bare UC... channel id works.
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCxxxxxxxxxxxxxxxx
+    lookback_days: 7
+    max_items: 3
+    enabled: false
+    # Per-source transcriber override: YouTube captions are free and exact, so
+    # use them here even if the global transcriber is whisper.
+    transcriber: captions
