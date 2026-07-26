@@ -38,13 +38,22 @@ class Pipeline:
     def __init__(self, config: Config) -> None:
         self.config = config
         self.store = Store(config.cache_dir)
-        self.transcriber = get_transcriber(
-            config.backends.transcriber, **config.backends.options
-        )
         self.summarizer = get_summarizer(
             config.backends.summarizer, **config.backends.options
         )
         self.voice = get_voice(config.backends.tts, **config.backends.options)
+        # Transcribers are built lazily and cached by name so an expensive model
+        # (Whisper) loads once even when several sources share a backend.
+        self._transcribers: dict[str, object] = {}
+
+    def _transcriber_for(self, source):
+        """The transcriber for a source: its override, else the global default."""
+        name = source.transcriber or self.config.backends.transcriber
+        if name not in self._transcribers:
+            self._transcribers[name] = get_transcriber(
+                name, **self.config.backends.options
+            )
+        return self._transcribers[name]
 
     def run(self, force: bool = False) -> RunResult:
         """Compile a digest.
@@ -71,10 +80,11 @@ class Pipeline:
                     logger.info("  skipping %d already-digested item(s)", skipped)
                 items = fresh
 
+            transcriber = self._transcriber_for(source)
             logger.info("  processing %d item(s)", len(items))
             for item in items:
                 try:
-                    note = self._process_item(extractor, item)
+                    note = self._process_item(extractor, item, transcriber)
                     if note is not None:
                         notes.append(note)
                         self.store.mark_seen(item.id)
@@ -85,14 +95,14 @@ class Pipeline:
         digest = Digest(generated_at=utcnow(), notes=notes)
         return self._render(digest)
 
-    def _process_item(self, extractor, item) -> Note | None:
+    def _process_item(self, extractor, item, transcriber) -> Note | None:
         # Only pay the download cost when the transcriber actually needs audio
         # and we haven't already cached this item's transcript.
-        if self.transcriber.needs_media and not self.store.has_transcript(item.id):
+        if transcriber.needs_media and not self.store.has_transcript(item.id):
             logger.info("  downloading: %s", item.title)
             extractor.fetch(item, self.store.media_dir)
 
-        transcript = cached_transcribe(self.transcriber, item, self.store)
+        transcript = cached_transcribe(transcriber, item, self.store)
         if not transcript.text.strip():
             logger.warning("  empty transcript, skipping: %s", item.title)
             return None

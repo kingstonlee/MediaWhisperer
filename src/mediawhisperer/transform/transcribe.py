@@ -115,6 +115,55 @@ class WhisperTranscriber(Transcriber):
         )
 
 
+@register("faster-whisper")
+class FasterWhisperTranscriber(Transcriber):
+    """Speech-to-text via faster-whisper (CTranslate2).
+
+    Same Whisper model quality as the reference implementation but several times
+    faster and lighter, so ``large-v3`` / ``distil-large-v3`` run comfortably on
+    a CPU. This is the recommended free, local, high-quality transcriber.
+
+    Options:
+        model:        model size/name (default "distil-large-v3").
+        device:       "cpu" (default) or "cuda".
+        compute_type: precision (default "int8" -- fast, low memory on CPU).
+    """
+
+    def __init__(self, **options) -> None:
+        super().__init__(**options)
+        self._model = None
+
+    def _load_model(self):
+        if self._model is None:
+            try:
+                from faster_whisper import WhisperModel
+            except ImportError as exc:  # pragma: no cover - optional dep
+                raise RuntimeError(
+                    "faster-whisper is required for the faster-whisper transcriber. "
+                    "Install it with: pip install 'mediawhisperer[faster-whisper]'"
+                ) from exc
+            self._model = WhisperModel(
+                self.options.get("model", "distil-large-v3"),
+                device=self.options.get("device", "cpu"),
+                compute_type=self.options.get("compute_type", "int8"),
+            )
+        return self._model
+
+    def transcribe(self, item: MediaItem) -> Transcript:
+        if not item.local_path:
+            raise ValueError(f"Item {item.id} has no downloaded media to transcribe.")
+        model = self._load_model()
+        segments, _info = model.transcribe(item.local_path)
+        text = " ".join(segment.text.strip() for segment in segments).strip()
+        return Transcript(
+            item_id=item.id,
+            title=item.title,
+            source_name=item.source_name,
+            text=text,
+            provenance="faster-whisper",
+        )
+
+
 @register("captions")
 class CaptionsTranscriber(Transcriber):
     """Use a video's existing subtitles instead of transcribing its audio.

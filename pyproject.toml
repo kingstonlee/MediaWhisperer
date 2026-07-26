@@ -16,15 +16,29 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Speech-to-text on downloaded audio.
+# Speech-to-text on downloaded audio (reference implementation).
 whisper = ["openai-whisper>=20231117"]
-# Downloading YouTube media.
+# Faster, lighter speech-to-text (recommended free/local transcriber).
+faster-whisper = ["faster-whisper>=1.0"]
+# Downloading YouTube media / pulling captions.
 youtube = ["yt-dlp>=2024.1"]
-# Offline text-to-speech for the audio digest.
+# Offline OS-voice text-to-speech.
 voice = ["pyttsx3>=2.90"]
+# Offline neural text-to-speech (recommended free/local voice).
+piper = ["piper-tts>=1.2"]
 # Everything, for a full local install.
-all = ["openai-whisper>=20231117", "yt-dlp>=2024.1", "pyttsx3>=2.90"]
+all = [
+    "faster-whisper>=1.0",
+    "openai-whisper>=20231117",
+    "yt-dlp>=2024.1",
+    "piper-tts>=1.2",
+    "pyttsx3>=2.90",
+]
 dev = ["pytest>=7.4"]
+
+# Note: the "llm" summarizer and "elevenlabs" voice backends use `requests`
+# (already a core dependency), so they need no extra install -- just an API key
+# (hosted providers) or a running Ollama (local, free).
 
 [project.scripts]
 mediawhisperer = "mediawhisperer.cli:main"

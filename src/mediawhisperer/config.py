@@ -104,4 +104,5 @@ def _parse_source(entry: dict[str, Any]) -> Source:
         lookback_days=int(entry.get("lookback_days", 7)),
         max_items=int(entry.get("max_items", 5)),
         enabled=bool(entry.get("enabled", True)),
+        transcriber=entry.get("transcriber"),
     )

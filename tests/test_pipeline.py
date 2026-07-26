@@ -93,3 +93,27 @@ def test_skip_seen_disabled_in_config(tmp_path):
     Pipeline(config).run()
     again = Pipeline(config).run()
     assert again.digest.item_count == 2
+
+
+def test_per_source_transcriber_override(tmp_path):
+    from mediawhisperer.models import Source, SourceKind
+    from mediawhisperer.transform.transcribe import CaptionsTranscriber, FeedTranscriber
+
+    config = _config(tmp_path)  # global transcriber is "feed"
+    pipeline = Pipeline(config)
+
+    podcast = Source(name="P", kind=SourceKind.PODCAST, url="u")  # no override
+    youtube = Source(name="Y", kind=SourceKind.YOUTUBE, url="u", transcriber="captions")
+
+    assert isinstance(pipeline._transcriber_for(podcast), FeedTranscriber)
+    assert isinstance(pipeline._transcriber_for(youtube), CaptionsTranscriber)
+
+
+def test_transcriber_instances_are_cached(tmp_path):
+    from mediawhisperer.models import Source, SourceKind
+
+    pipeline = Pipeline(_config(tmp_path))
+    a = Source(name="A", kind=SourceKind.PODCAST, url="u", transcriber="feed")
+    b = Source(name="B", kind=SourceKind.PODCAST, url="u2", transcriber="feed")
+    # Same backend name -> same cached instance (so a model loads only once).
+    assert pipeline._transcriber_for(a) is pipeline._transcriber_for(b)

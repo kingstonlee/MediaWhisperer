@@ -112,6 +112,48 @@ class ElevenLabsBackend(VoiceBackend):
         return dest
 
 
+@register("piper")
+class PiperBackend(VoiceBackend):
+    """Offline neural text-to-speech via Piper.
+
+    Piper produces natural-sounding speech entirely locally and for free -- a
+    big step up from the robotic OS voices of pyttsx3, with no API key. It needs
+    a downloaded voice model (a ``.onnx`` file plus its ``.onnx.json`` config);
+    grab one from the Piper voices catalog and point ``model`` at it.
+
+    Options:
+        model:      path to the voice's ``.onnx`` file (required).
+        piper_bin:  the piper executable (default "piper").
+    """
+
+    suffix = ".wav"
+
+    def synthesize(self, script: str, dest: Path) -> Path:
+        import shutil
+        import subprocess
+
+        model = self.options.get("model")
+        if not model:
+            raise RuntimeError(
+                "Piper needs a voice model. Set 'model' under backends.options "
+                "to a downloaded .onnx voice file."
+            )
+        piper_bin = self.options.get("piper_bin", "piper")
+        if shutil.which(piper_bin) is None and not Path(piper_bin).exists():
+            raise RuntimeError(
+                f"Piper executable {piper_bin!r} not found. "
+                "Install it with: pip install 'mediawhisperer[piper]'"
+            )
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [piper_bin, "--model", str(model), "--output_file", str(dest)],
+            input=script.encode("utf-8"),
+            check=True,
+        )
+        return dest
+
+
 @register("pyttsx3")
 class Pyttsx3Backend(VoiceBackend):
     """Offline OS-level text-to-speech producing a real audio file."""

@@ -43,9 +43,9 @@ real digest in seconds. Upgrade any stage when you want more quality:
 
 | Stage       | Default (offline)            | Opt-in upgrade                          |
 |-------------|------------------------------|-----------------------------------------|
-| Transcribe  | `feed` (use show notes)      | `captions` (reuse a video's subtitles), `whisper` (speech-to-text on the audio) |
-| Summarize   | `extractive` (no network)    | pluggable LLM backend (registry seam)   |
-| Text-to-speech | `script` (writes the text) | `pyttsx3` (offline audio), `elevenlabs` (neural cloud voice) |
+| Transcribe  | `feed` (use show notes)      | `captions` (reuse a video's subtitles), `faster-whisper` (fast local STT), `whisper` |
+| Summarize   | `extractive` (no network)    | `llm` (abstractive, via Ollama/Groq/OpenAI/Gemini) |
+| Text-to-speech | `script` (writes the text) | `piper` (neural offline), `pyttsx3` (offline), `elevenlabs` (neural cloud) |
 
 The `captions` transcriber pulls a YouTube video's existing subtitles (creator
 or auto-generated) with `yt-dlp` and skips audio processing entirely — when the
@@ -54,6 +54,45 @@ back to the feed description for uncaptioned videos.
 
 Downloading media uses `yt-dlp`. Transcripts are cached by item, so re-running a
 feed only does new work.
+
+### Best quality for free (recommended stack)
+
+Every one of these runs **locally at no cost** (you only spend your own compute)
+and is a big step up from the offline defaults. Install the extras and point a
+config at them:
+
+```bash
+pip install -e '.[faster-whisper,piper,youtube]'
+# plus a local model server for summaries, free: https://ollama.com  ->  `ollama pull llama3.1`
+```
+
+```yaml
+backends:
+  transcriber: faster-whisper   # near-SOTA speech-to-text, runs on CPU
+  summarizer: llm               # real abstractive summaries
+  tts: piper                    # natural neural voice, offline
+  options:
+    model: distil-large-v3      # faster-whisper model
+    provider: ollama            # llm provider (local, free)
+    # For Piper, point at a downloaded .onnx voice:
+    # model: /path/to/en_US-lessac-medium.onnx
+
+sources:
+  # Use free, exact captions for YouTube; transcribe audio for podcasts.
+  - name: A YouTube Channel
+    kind: youtube
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UC...
+    transcriber: captions       # per-source override
+  - name: A Podcast
+    kind: podcast
+    url: https://example.com/feed.xml
+    # inherits faster-whisper from the global backend
+```
+
+Prefer not to tie up your machine? Swap `provider: ollama` for `groq` or
+`gemini` (generous free tiers) and set the matching `*_API_KEY` — a personal
+daily digest realistically stays free. See the per-provider notes in
+[`config.example.yaml`](config.example.yaml).
 
 ### Only new content, every run
 

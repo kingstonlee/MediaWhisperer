@@ -21,15 +21,30 @@ emit_html: false
 
 # Which implementation to use for each swappable stage.
 # The defaults below run fully offline with no API keys and no model downloads.
+# For the recommended free, high-quality stack, see the commented block further
+# down and the README's "Best quality for free" section.
 backends:
-  transcriber: feed        # feed (no audio) | captions (youtube subtitles) | whisper (speech-to-text)
-  summarizer: extractive   # extractive (offline)
-  tts: script              # script (text only) | pyttsx3 (offline audio) | elevenlabs (cloud)
+  transcriber: feed        # feed | captions | whisper | faster-whisper
+  summarizer: extractive   # extractive | llm
+  tts: script              # script | pyttsx3 | piper | elevenlabs
   options:
-    model: base            # whisper model size, if transcriber: whisper
+    # -- transcriber options --
+    model: base            # whisper/faster-whisper model (e.g. base, small, distil-large-v3)
+    # device: cpu          # faster-whisper: cpu | cuda
+    # compute_type: int8   # faster-whisper precision (int8 = fast/low-memory)
     languages: [en]        # preferred caption languages, if transcriber: captions
     allow_auto: true       # accept auto-generated captions, if transcriber: captions
+
+    # -- summarizer options (transcriber: llm) --
+    # provider: ollama     # ollama (local/free) | groq | openai | gemini
+    # model: llama3.1      # override the provider's default model
+    # Hosted providers read their key from the environment:
+    #   GROQ_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY
+
+    # -- tts options --
     rate: 175              # words-per-minute, if tts: pyttsx3
+    # For tts: piper -- point at a downloaded .onnx voice model:
+    # model: /path/to/en_US-lessac-medium.onnx
     # For tts: elevenlabs -- set ELEVENLABS_API_KEY in the environment (don't
     # put secrets in this file). Optionally pin a voice:
     voice_id: 21m00Tcm4TlvDq8ikWAM
@@ -49,3 +64,6 @@ sources:
     lookback_days: 7
     max_items: 3
     enabled: false
+    # Per-source transcriber override: YouTube captions are free and exact, so
+    # use them here even if the global transcriber is whisper.
+    transcriber: captions

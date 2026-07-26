@@ -39,6 +39,9 @@ class Source:
     # Hard ceiling on items per run so a firehose feed can't dominate a digest.
     max_items: int = 5
     enabled: bool = True
+    # Optional per-source transcriber override (e.g. "captions" for a YouTube
+    # channel, "whisper" for a podcast). Falls back to the global backend.
+    transcriber: str | None = None
 
 
 @dataclass
