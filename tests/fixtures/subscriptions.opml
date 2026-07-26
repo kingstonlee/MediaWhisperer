@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>My Podcast Subscriptions</title></head>
+  <body>
+    <outline text="Disney" title="Disney">
+      <outline type="rss" text="Parks Podcast" title="Parks Podcast"
+               xmlUrl="https://example.com/parks/feed.xml"/>
+      <outline type="rss" text="Star Wars Show"
+               xmlUrl="https://example.com/starwars/feed.xml"/>
+    </outline>
+    <outline type="rss" text="Marvel Weekly"
+             xmlUrl="https://example.com/marvel/feed.xml"/>
+    <outline type="rss" text="Duplicate Parks"
+             xmlUrl="https://example.com/parks/feed.xml"/>
+    <outline text="A folder with no feed"/>
+  </body>
+</opml>

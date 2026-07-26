@@ -46,3 +46,51 @@ def test_cli_run_produces_outputs(tmp_path):
 
 def test_cli_missing_config_returns_error_code(tmp_path):
     assert main(["run", "-c", str(tmp_path / "nope.yaml")]) == 2
+
+
+OPML = Path(__file__).parent / "fixtures" / "subscriptions.opml"
+
+
+def test_cli_init_creates_runnable_config(tmp_path):
+    config = tmp_path / "config.yaml"
+    assert main(["init", "-c", str(config)]) == 0
+    assert config.exists()
+    # The scaffold must load as a valid config.
+    from mediawhisperer.config import Config
+
+    Config.load(config)
+
+
+def test_cli_init_refuses_to_clobber(tmp_path):
+    config = tmp_path / "config.yaml"
+    config.write_text("existing", encoding="utf-8")
+    assert main(["init", "-c", str(config)]) == 1
+    assert config.read_text(encoding="utf-8") == "existing"
+
+
+def test_cli_import_opml_into_new_config(tmp_path):
+    config = tmp_path / "config.yaml"
+    assert main(["import-opml", str(OPML), "-c", str(config)]) == 0
+
+    from mediawhisperer.config import Config
+
+    loaded = Config.load(config)
+    urls = {s.url for s in loaded.sources}
+    assert "https://example.com/marvel/feed.xml" in urls
+    # Three unique feeds in the fixture (one duplicate collapsed).
+    assert len(loaded.sources) == 3
+
+
+def test_cli_import_opml_is_idempotent(tmp_path):
+    config = tmp_path / "config.yaml"
+    main(["import-opml", str(OPML), "-c", str(config)])
+    main(["import-opml", str(OPML), "-c", str(config)])
+
+    from mediawhisperer.config import Config
+
+    loaded = Config.load(config)
+    assert len(loaded.sources) == 3  # no duplicates on re-import
+
+
+def test_cli_import_opml_missing_file(tmp_path):
+    assert main(["import-opml", str(tmp_path / "nope.opml"), "-c", str(tmp_path / "c.yaml")]) == 2

@@ -72,18 +72,25 @@ mediawhisperer run -c config.yaml --force
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
 
-# 2. Configure your feeds
-cp config.example.yaml config.yaml
-#   ...edit config.yaml to point at the podcasts / channels you follow
+# 2. Create a config
+mediawhisperer init                 # writes a starter config.yaml
+#   ...then edit it to point at the podcasts / channels you follow
 
 # 3. Compile your digest
-mediawhisperer run -c config.yaml -v
+mediawhisperer run -v
+```
+
+Already have podcast subscriptions? Export them from your podcast app as OPML
+and bring them all in at once:
+
+```bash
+mediawhisperer import-opml my-subscriptions.opml
 ```
 
 List what you've configured without running anything:
 
 ```bash
-mediawhisperer sources -c config.yaml
+mediawhisperer sources
 ```
 
 ### Enabling the heavier backends
