@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mediawhisperer"
+version = "0.1.0"
+description = "Compile your podcast and video feeds into a digest and a listen-ready script."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "feedparser>=6.0",
+    "pyyaml>=6.0",
+    "requests>=2.28",
+]
+
+[project.optional-dependencies]
+# Speech-to-text on downloaded audio.
+whisper = ["openai-whisper>=20231117"]
+# Downloading YouTube media.
+youtube = ["yt-dlp>=2024.1"]
+# Offline text-to-speech for the audio digest.
+voice = ["pyttsx3>=2.90"]
+# Everything, for a full local install.
+all = ["openai-whisper>=20231117", "yt-dlp>=2024.1", "pyttsx3>=2.90"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+mediawhisperer = "mediawhisperer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
