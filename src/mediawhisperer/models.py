@@ -111,6 +111,26 @@ class Note:
 
 
 @dataclass
+class Story:
+    """A cluster of notes from different feeds covering the same story."""
+
+    key_topics: list[str]
+    members: list[Note] = field(default_factory=list)
+
+    @property
+    def title(self) -> str:
+        return " · ".join(self.key_topics) if self.key_topics else self.members[0].title
+
+    @property
+    def sources(self) -> list[str]:
+        seen: list[str] = []
+        for note in self.members:
+            if note.source_name not in seen:
+                seen.append(note.source_name)
+        return seen
+
+
+@dataclass
 class Digest:
     """The compiled output of a full run across all sources."""
 

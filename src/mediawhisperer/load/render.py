@@ -10,7 +10,8 @@ versions never drift apart.
 
 from __future__ import annotations
 
-from ..models import Digest, Note, SourceKind
+from ..models import Digest, Note, SourceKind, Story
+from ..transform.cluster import cluster_stories
 from ..transform.timing import format_timestamp
 from ..transform.topics import top_themes
 
@@ -18,6 +19,11 @@ from ..transform.topics import top_themes
 def digest_themes(digest: Digest, limit: int = 5) -> list[str]:
     """The dominant themes across every item in the digest."""
     return top_themes([note.topics for note in digest.notes], limit=limit)
+
+
+def digest_stories(digest: Digest) -> list[Story]:
+    """Cross-feed stories: the same topic covered by more than one source."""
+    return cluster_stories(digest.notes)
 
 
 def deep_link(note: Note, seconds: float) -> str | None:
@@ -52,6 +58,20 @@ def render_markdown(digest: Digest) -> str:
     if themes:
         lines.append("**Today's themes:** " + " · ".join(themes))
         lines.append("")
+
+    stories = digest_stories(digest)
+    if stories:
+        lines.append("## Top stories across your feeds")
+        lines.append("")
+        for story in stories:
+            lines.append(f"### {story.title}")
+            lines.append(
+                f"*Covered by {len(story.sources)} sources: {', '.join(story.sources)}*"
+            )
+            for note in story.members:
+                link = f"[{note.title}]({note.url})" if note.url else note.title
+                lines.append(f"- {link} — {note.source_name}")
+            lines.append("")
 
     for source_name, notes in _group_by_source(digest.notes).items():
         lines.append(f"## {source_name}")
@@ -136,6 +156,22 @@ def render_html(digest: Digest) -> str:
     if themes:
         chips = "".join(f'<span class="chip">{_html.escape(t)}</span>' for t in themes)
         out.append(f'<div class="themes"><strong>Today\'s themes</strong>{chips}</div>')
+
+    stories = digest_stories(digest)
+    if stories:
+        out.append('<section class="stories"><h2>Top stories across your feeds</h2>')
+        for story in stories:
+            out.append(f"<article><h3>{_html.escape(story.title)}</h3>")
+            out.append(
+                f'<p class="pub">Covered by {len(story.sources)} sources: '
+                f'{_html.escape(", ".join(story.sources))}</p><ul>'
+            )
+            for note in story.members:
+                title = _html.escape(note.title)
+                inner = f'<a href="{_html.escape(note.url)}">{title}</a>' if note.url else title
+                out.append(f"<li>{inner} — {_html.escape(note.source_name)}</li>")
+            out.append("</ul></article>")
+        out.append("</section>")
 
     for source_name, notes in _group_by_source(digest.notes).items():
         out.append(f'<section><h2>{_html.escape(source_name)}</h2>')
