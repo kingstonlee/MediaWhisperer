@@ -42,9 +42,14 @@ _PROVIDERS = {
 _SYSTEM_PROMPT = (
     "You condense podcast and video transcripts into a tight briefing for a busy "
     "fan. Capture the actual news, stories, and facts -- not vague description. "
+    "PRESERVE CONCRETE DETAILS verbatim: names, numbers, dates, prices, "
+    "statistics, and direct quotes. Never generalize a specific away (write "
+    "'opens May 27th', not 'opens soon'). "
     "Respond ONLY with a JSON object of the form "
-    '{"summary": "<2-4 sentences>", "highlights": ["<short bullet>", ...]}. '
-    "No preamble, no markdown, no code fences."
+    '{"summary": "<2-4 sentences>", "highlights": ["<short bullet>", ...], '
+    '"key_facts": ["<one concrete fact with its specifics>", ...]}. '
+    "Each key_fact must contain a specific detail (a number, date, name, or "
+    "quote). No preamble, no markdown, no code fences."
 )
 
 
@@ -79,12 +84,18 @@ class LLMSummarizer(Summarizer):
         item_kind: SourceKind = SourceKind.PODCAST,
     ) -> Note:
         content = self._complete(transcript, summary_sentences, highlights)
-        summary, bullets = _parse_response(content, highlights)
+        summary, bullets, facts = _parse_response(content, highlights)
 
         # Deterministic topics -- free, stable, no extra tokens.
         topics = extract_keyphrases(
             transcript.text, self.options.get("topics_per_item", 5)
         )
+        # If the model didn't return key facts, fall back to extracting them so
+        # the specifics are captured regardless of the model's cooperation.
+        if not facts:
+            from .facts import extract_key_facts
+
+            facts = extract_key_facts(transcript.text, self.options.get("key_facts_per_item", 5))
         return Note(
             item_id=transcript.item_id,
             title=transcript.title,
@@ -93,6 +104,7 @@ class LLMSummarizer(Summarizer):
             summary=summary or transcript.text.strip()[:500],
             highlights=bullets,
             topics=topics,
+            key_facts=facts,
             published=published,
             kind=item_kind,
         )
@@ -134,8 +146,8 @@ class LLMSummarizer(Summarizer):
         return data["choices"][0]["message"]["content"]
 
 
-def _parse_response(content: str, max_highlights: int) -> tuple[str, list[str]]:
-    """Pull summary + highlights out of the model's reply, tolerating slop."""
+def _parse_response(content: str, max_highlights: int) -> tuple[str, list[str], list[str]]:
+    """Pull summary + highlights + key facts from the reply, tolerating slop."""
     text = content.strip()
     # Strip a ```json ... ``` fence if the model added one despite instructions.
     fence = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
@@ -146,7 +158,8 @@ def _parse_response(content: str, max_highlights: int) -> tuple[str, list[str]]:
         payload = json.loads(text)
         summary = str(payload.get("summary", "")).strip()
         highlights = [str(h).strip() for h in payload.get("highlights", []) if str(h).strip()]
-        return summary, highlights[:max_highlights]
+        facts = [str(f).strip() for f in payload.get("key_facts", []) if str(f).strip()]
+        return summary, highlights[:max_highlights], facts
     except (json.JSONDecodeError, AttributeError, TypeError):
         # Not valid JSON -- fall back to treating the whole reply as the summary.
-        return text, []
+        return text, [], []

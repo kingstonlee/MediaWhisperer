@@ -102,6 +102,9 @@ class Note:
     summary: str
     highlights: list[str] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
+    # Concrete detail-bearing statements (numbers, dates, names, quotes) pulled
+    # from the item so specifics survive summarization.
+    key_facts: list[str] = field(default_factory=list)
     published: datetime | None = None
     # Source kind, so renderers can build kind-specific deep links.
     kind: SourceKind = SourceKind.PODCAST

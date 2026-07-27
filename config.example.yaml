@@ -9,6 +9,7 @@ cache_dir: .cache
 # How the summary of each item is shaped.
 summary_sentences: 3      # sentences kept in each item's summary
 highlights_per_item: 4    # bullet-point highlights per item
+# (Key-facts count is set under backends.options as key_facts_per_item.)
 
 # Only surface items that haven't appeared in a previous digest. This is what
 # makes a daily/weekly run show just the new stuff. Override for one run with
@@ -46,6 +47,8 @@ backends:
     # compute_type: int8   # faster-whisper precision (int8 = fast/low-memory)
     languages: [en]        # preferred caption languages, if transcriber: captions
     allow_auto: true       # accept auto-generated captions, if transcriber: captions
+    key_facts_per_item: 5  # max detail-bearing facts pulled per item
+    topics_per_item: 5     # max topic tags per item
 
     # -- summarizer options (transcriber: llm) --
     # provider: ollama     # ollama (local/free) | groq | openai | gemini

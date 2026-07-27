@@ -102,5 +102,8 @@ def test_unknown_provider_raises():
 
 
 def test_parse_response_helper():
-    assert _parse_response('{"summary":"a","highlights":["x"]}', 4) == ("a", ["x"])
-    assert _parse_response("not json", 4) == ("not json", [])
+    assert _parse_response('{"summary":"a","highlights":["x"]}', 4) == ("a", ["x"], [])
+    assert _parse_response(
+        '{"summary":"a","highlights":["x"],"key_facts":["opened May 27th"]}', 4
+    ) == ("a", ["x"], ["opened May 27th"])
+    assert _parse_response("not json", 4) == ("not json", [], [])

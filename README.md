@@ -21,7 +21,7 @@ The output of a run is a set of deliverables, all built from the same digest so
 the written and spoken versions never drift apart:
 
 - **`digest-YYYY-MM-DD.md`** — a skimmable notes page, grouped by source, with a
-  short summary, highlight bullets, and topic tags per item.
+  short summary, a **Key facts** list, highlight bullets, and topic tags per item.
 - **`digest-YYYY-MM-DD.script.txt`** — a listen-ready narration script that a
   voice backend can turn into your own daily audio briefing.
 - **`digest-YYYY-MM-DD.html`** — an optional self-contained HTML page (enable
@@ -34,6 +34,15 @@ whole run into the digest's **themes** — the topics showing up in more than on
 feed. That turns a pile of separate summaries into a single answer to "what's
 the big story across everything I follow this week?", surfaced at the top of the
 notes page and the audio intro.
+
+### Keep the specifics
+
+Summaries are built to hold on to the *details*, not flatten them into a gloss.
+Sentence selection is biased toward concrete specifics — numbers, dates, prices,
+names, quotes — and every item also gets an explicit **Key facts** list that
+pulls out those detail-bearing statements, so nothing important is lost in
+compression. The `llm` summarizer is likewise instructed to preserve specifics
+verbatim and return its own key facts (with a deterministic fallback).
 
 ### Signal over noise: cross-feed stories
 

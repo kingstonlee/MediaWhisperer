@@ -82,6 +82,11 @@ def render_markdown(digest: Digest) -> str:
                 lines.append(f"*{note.published.strftime('%b %-d, %Y')}*")
             lines.append("")
             lines.append(note.summary)
+            if note.key_facts:
+                lines.append("")
+                lines.append("**Key facts**")
+                for fact in note.key_facts:
+                    lines.append(f"- {fact}")
             if note.highlights:
                 lines.append("")
                 lines.append("**Highlights**")
@@ -185,6 +190,9 @@ def render_html(digest: Digest) -> str:
             if note.published:
                 out.append(f'<p class="pub">{note.published.strftime("%b %-d, %Y")}</p>')
             out.append(f"<p>{_html.escape(note.summary)}</p>")
+            if note.key_facts:
+                facts = "".join(f"<li>{_html.escape(f)}</li>" for f in note.key_facts)
+                out.append(f'<p class="label">Key facts</p><ul class="facts">{facts}</ul>')
             if note.highlights:
                 items = []
                 for bullet, seconds in zip(note.highlights, _highlight_times(note)):
@@ -233,6 +241,8 @@ h3 a { color: inherit; text-decoration: none; border-bottom: 2px solid color-mix
 .pub { margin: 0 0 .5rem; font-size: .85rem; opacity: .6; }
 ul { margin: .5rem 0; padding-left: 1.2rem; }
 li { margin: .2rem 0; }
+.label { margin: .8rem 0 .1rem; font-weight: 600; font-size: .95rem; }
+.facts { margin-top: .2rem; }
 .ts { font-variant-numeric: tabular-nums; font-size: .8rem; opacity: .7; white-space: nowrap; }
 a.ts { text-decoration: none; border-bottom: 1px dotted currentColor; }
 .tags { margin: .6rem 0 0; }
