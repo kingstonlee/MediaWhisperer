@@ -16,13 +16,14 @@ from mediawhisperer.transform.transcribe import (
 
 def test_faster_whisper_maps_segments(tmp_path):
     class FakeSegment:
-        def __init__(self, text):
+        def __init__(self, text, start=0.0):
             self.text = text
+            self.start = start
 
     class FakeModel:
         def transcribe(self, path):
             assert Path(path).exists()
-            return ([FakeSegment(" Hello there. "), FakeSegment(" Second part. ")], {"language": "en"})
+            return ([FakeSegment(" Hello there. ", 0.0), FakeSegment(" Second part. ", 4.2)], {"language": "en"})
 
     audio = tmp_path / "clip.wav"
     audio.write_bytes(b"RIFF....")

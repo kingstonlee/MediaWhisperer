@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from .load.feed import FeedMeta
 from .models import Source, SourceKind
 
 
@@ -47,6 +48,9 @@ class Config:
     skip_seen: bool = True
     # Also write a self-contained HTML version of the notes page.
     emit_html: bool = False
+    # Publish audio digests as a subscribable podcast RSS feed.
+    emit_feed: bool = False
+    feed: FeedMeta = field(default_factory=FeedMeta)
 
     @classmethod
     def load(cls, path: str | Path) -> "Config":
@@ -76,6 +80,8 @@ class Config:
             summary_sentences=int(raw.get("summary_sentences", 3)),
             skip_seen=bool(raw.get("skip_seen", True)),
             emit_html=bool(raw.get("emit_html", False)),
+            emit_feed=bool(raw.get("emit_feed", False)),
+            feed=FeedMeta.from_dict(raw.get("feed")),
         )
 
     @property

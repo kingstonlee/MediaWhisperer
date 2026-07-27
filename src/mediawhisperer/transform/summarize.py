@@ -22,8 +22,10 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 
-from ..models import Note, Transcript
+from ..models import Note, SourceKind, Transcript
+from .facts import extract_key_facts, fact_density
 from .lexicon import STOPWORDS as _STOPWORDS
+from .timing import locate_time
 from .topics import extract_keyphrases
 
 _REGISTRY: dict[str, type["Summarizer"]] = {}
@@ -56,6 +58,7 @@ class Summarizer(ABC):
         published=None,
         summary_sentences: int = 3,
         highlights: int = 4,
+        item_kind: SourceKind = SourceKind.PODCAST,
     ) -> Note:
         ...
 
@@ -82,12 +85,15 @@ class ExtractiveSummarizer(Summarizer):
         published=None,
         summary_sentences: int = 3,
         highlights: int = 4,
+        item_kind: SourceKind = SourceKind.PODCAST,
     ) -> Note:
         sentences = split_sentences(transcript.text)
         topics = extract_keyphrases(transcript.text, self.options.get("topics_per_item", 5))
+        facts_limit = self.options.get("key_facts_per_item", 5)
 
         if len(sentences) <= summary_sentences:
-            # Too short to meaningfully compress; use it verbatim.
+            # Too short to meaningfully compress; use it verbatim. A separate
+            # facts list would just repeat the summary, so skip it.
             summary = " ".join(sentences) if sentences else transcript.text.strip()
             return Note(
                 item_id=transcript.item_id,
@@ -97,7 +103,9 @@ class ExtractiveSummarizer(Summarizer):
                 summary=summary,
                 highlights=[],
                 topics=topics,
+                key_facts=[],
                 published=published,
+                kind=item_kind,
             )
 
         scores = self._score_sentences(sentences)
@@ -109,8 +117,24 @@ class ExtractiveSummarizer(Summarizer):
 
         # Highlights: the next tier, trimmed into short bullets, no overlap with
         # sentences already in the summary.
-        highlight_idx = [i for i in ranked if i not in set(chosen)][:highlights]
-        bullets = [_to_bullet(sentences[i]) for i in sorted(highlight_idx)]
+        highlight_idx = sorted(i for i in ranked if i not in set(chosen))[:highlights]
+        bullets = [_to_bullet(sentences[i]) for i in highlight_idx]
+        # Timestamp each highlight from the transcript's segments (if any). We
+        # locate on the full sentence, not the trimmed bullet, for a better match.
+        times = [locate_time(transcript.segments, sentences[i]) for i in highlight_idx]
+
+        pairs = [(b, t) for b, t in zip(bullets, times) if b]
+        chosen_bullets = [b for b, _ in pairs]
+
+        # Prefer key facts that add *new* specifics over ones already shown in
+        # the summary or highlights, but still surface specifics if that's all
+        # there is. Pull extra candidates, then order novel-first.
+        candidates = extract_key_facts(transcript.text, facts_limit + 4)
+        already = {_dedup_key(sentences[i]) for i in chosen}
+        already |= {_dedup_key(b) for b in chosen_bullets}
+        novel = [f for f in candidates if _dedup_key(f) not in already]
+        repeats = [f for f in candidates if _dedup_key(f) in already]
+        facts = (novel + repeats)[:facts_limit]
 
         return Note(
             item_id=transcript.item_id,
@@ -118,9 +142,12 @@ class ExtractiveSummarizer(Summarizer):
             source_name=transcript.source_name,
             url=item_url,
             summary=summary,
-            highlights=[b for b in bullets if b],
+            highlights=chosen_bullets,
+            highlight_times=[t for _, t in pairs],
             topics=topics,
+            key_facts=facts,
             published=published,
+            kind=item_kind,
         )
 
     def _score_sentences(self, sentences: list[str]) -> list[float]:
@@ -149,8 +176,19 @@ class ExtractiveSummarizer(Summarizer):
             # Small lead bonus -- intros often carry the thesis.
             if position == 0:
                 score *= 1.15
+            # Detail bonus -- strongly favor sentences carrying concrete
+            # specifics (numbers, dates, names, quotes) so the summary keeps the
+            # facts rather than a vague gloss.
+            score *= 1.0 + 1.2 * min(fact_density(sentence), 0.5) / 0.5
             scores.append(score)
         return scores
+
+
+def _dedup_key(text: str) -> str:
+    """A comparison key (first several content words) for de-duplicating lines
+    even when one has been trimmed into a bullet."""
+    words = _WORD_RE.findall(text.lower())
+    return " ".join(words[:8])
 
 
 def _to_bullet(sentence: str, max_words: int = 26) -> str:

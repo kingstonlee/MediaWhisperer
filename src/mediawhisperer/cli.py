@@ -138,6 +138,8 @@ def _cmd_run(config: Config, force: bool = False) -> int:
     print(f"  script: {result.script_path}")
     if result.audio_path:
         print(f"  audio:  {result.audio_path}")
+    if result.feed_path:
+        print(f"  feed:   {result.feed_path}")
     if result.digest.item_count == 0:
         print("No items found. Try widening lookback_days or check your feed URLs.")
     return 0

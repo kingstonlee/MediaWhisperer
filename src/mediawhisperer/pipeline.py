@@ -17,7 +17,15 @@ from pathlib import Path
 
 from .config import Config
 from .extract import get_extractor
-from .load import get_voice, render_html, render_markdown, render_script
+from .load import (
+    digest_themes,
+    get_voice,
+    render_html,
+    render_markdown,
+    render_script,
+    update_feed,
+)
+from .load.feed import _MIME_BY_SUFFIX
 from .models import Digest, Note, utcnow
 from .store import Store
 from .transform import cached_transcribe, get_summarizer, get_transcriber
@@ -32,6 +40,7 @@ class RunResult:
     script_path: Path
     audio_path: Path | None
     html_path: Path | None = None
+    feed_path: Path | None = None
 
 
 class Pipeline:
@@ -113,6 +122,7 @@ class Pipeline:
             published=item.published,
             summary_sentences=self.config.summary_sentences,
             highlights=self.config.highlights_per_item,
+            item_kind=item.kind,
         )
 
     def _render(self, digest: Digest) -> RunResult:
@@ -137,10 +147,36 @@ class Pipeline:
             audio_dest = out / f"digest-{stamp}{self.voice.suffix}"
             audio_path = self.voice.synthesize(script, audio_dest)
 
+        feed_path = self._maybe_publish_feed(digest, audio_path, stamp)
+
         return RunResult(
             digest=digest,
             notes_path=notes_path,
             script_path=script_path,
             audio_path=audio_path,
             html_path=html_path,
+            feed_path=feed_path,
+        )
+
+    def _maybe_publish_feed(self, digest: Digest, audio_path: Path | None, stamp: str) -> Path | None:
+        """Add this run's audio digest as an episode in the podcast feed."""
+        if not self.config.emit_feed or audio_path is None:
+            return None
+        # Only real audio belongs in a podcast feed (the script backend emits .txt).
+        if audio_path.suffix.lower() not in _MIME_BY_SUFFIX:
+            logger.info("  skipping feed: tts backend produced no audio (%s)", audio_path.suffix)
+            return None
+
+        themes = digest_themes(digest, limit=4)
+        description = (
+            f"{digest.item_count} item(s) from your feeds."
+            + (f" Themes: {', '.join(themes)}." if themes else "")
+        )
+        return update_feed(
+            feed_dir=self.config.output_dir / "podcast",
+            meta=self.config.feed,
+            audio_path=audio_path,
+            title=f"Daily Digest — {digest.generated_at.strftime('%B %-d, %Y')}",
+            description=description,
+            published=digest.generated_at,
         )

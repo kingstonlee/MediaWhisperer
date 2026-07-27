@@ -9,6 +9,7 @@ cache_dir: .cache
 # How the summary of each item is shaped.
 summary_sentences: 3      # sentences kept in each item's summary
 highlights_per_item: 4    # bullet-point highlights per item
+# (Key-facts count is set under backends.options as key_facts_per_item.)
 
 # Only surface items that haven't appeared in a previous digest. This is what
 # makes a daily/weekly run show just the new stuff. Override for one run with
@@ -18,6 +19,18 @@ skip_seen: true
 # Also write a self-contained HTML version of the notes page next to the
 # Markdown one (nice for reading in a browser).
 emit_html: false
+
+# Publish the audio digests as a subscribable podcast RSS feed. Needs an audio
+# tts backend (piper/pyttsx3/elevenlabs). Host output_dir on any static web
+# server, point base_url at it, and subscribe to <base_url>/podcast/feed.xml in
+# your podcast app to get your own daily briefing.
+emit_feed: false
+feed:
+  title: My MediaWhisperer Briefing
+  description: A personal audio digest of my podcast and video feeds.
+  author: Me
+  base_url: https://your-host.example.com/digests
+  max_episodes: 50
 
 # Which implementation to use for each swappable stage.
 # The defaults below run fully offline with no API keys and no model downloads.
@@ -34,6 +47,8 @@ backends:
     # compute_type: int8   # faster-whisper precision (int8 = fast/low-memory)
     languages: [en]        # preferred caption languages, if transcriber: captions
     allow_auto: true       # accept auto-generated captions, if transcriber: captions
+    key_facts_per_item: 5  # max detail-bearing facts pulled per item
+    topics_per_item: 5     # max topic tags per item
 
     # -- summarizer options (transcriber: llm) --
     # provider: ollama     # ollama (local/free) | groq | openai | gemini

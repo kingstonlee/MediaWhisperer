@@ -81,6 +81,10 @@ class Transcript:
     text: str
     # Which backend produced the text (e.g. "whisper", "feed", "captions").
     provenance: str = "unknown"
+    # Optional timed segments: [{"start": <seconds>, "text": <str>}, ...].
+    # Kept as plain dicts so the transcript cache round-trips through JSON with
+    # no custom (de)serialization. Empty when the backend has no timing (feed).
+    segments: list[dict] = field(default_factory=list)
 
     @property
     def word_count(self) -> int:
@@ -98,7 +102,35 @@ class Note:
     summary: str
     highlights: list[str] = field(default_factory=list)
     topics: list[str] = field(default_factory=list)
+    # Concrete detail-bearing statements (numbers, dates, names, quotes) pulled
+    # from the item so specifics survive summarization.
+    key_facts: list[str] = field(default_factory=list)
     published: datetime | None = None
+    # Source kind, so renderers can build kind-specific deep links.
+    kind: SourceKind = SourceKind.PODCAST
+    # Start time (seconds) for each highlight, aligned by index with
+    # ``highlights``; an entry is None when no timing could be resolved.
+    highlight_times: list[float | None] = field(default_factory=list)
+
+
+@dataclass
+class Story:
+    """A cluster of notes from different feeds covering the same story."""
+
+    key_topics: list[str]
+    members: list[Note] = field(default_factory=list)
+
+    @property
+    def title(self) -> str:
+        return " · ".join(self.key_topics) if self.key_topics else self.members[0].title
+
+    @property
+    def sources(self) -> list[str]:
+        seen: list[str] = []
+        for note in self.members:
+            if note.source_name not in seen:
+                seen.append(note.source_name)
+        return seen
 
 
 @dataclass

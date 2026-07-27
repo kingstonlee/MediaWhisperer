@@ -22,7 +22,7 @@ from pathlib import Path
 
 from ..models import MediaItem, Transcript
 from ..store import Store
-from .captions import parse_subtitles
+from .captions import parse_subtitles, parse_vtt_cues
 
 _REGISTRY: dict[str, type["Transcriber"]] = {}
 
@@ -106,12 +106,17 @@ class WhisperTranscriber(Transcriber):
             raise ValueError(f"Item {item.id} has no downloaded media to transcribe.")
         model = self._load_model()
         result = model.transcribe(item.local_path)
+        segments = [
+            {"start": float(seg.get("start", 0.0)), "text": str(seg.get("text", "")).strip()}
+            for seg in result.get("segments", [])
+        ]
         return Transcript(
             item_id=item.id,
             title=item.title,
             source_name=item.source_name,
             text=result.get("text", "").strip(),
             provenance="whisper",
+            segments=segments,
         )
 
 
@@ -153,14 +158,18 @@ class FasterWhisperTranscriber(Transcriber):
         if not item.local_path:
             raise ValueError(f"Item {item.id} has no downloaded media to transcribe.")
         model = self._load_model()
-        segments, _info = model.transcribe(item.local_path)
-        text = " ".join(segment.text.strip() for segment in segments).strip()
+        raw_segments, _info = model.transcribe(item.local_path)
+        segments = [
+            {"start": float(seg.start), "text": seg.text.strip()} for seg in raw_segments
+        ]
+        text = " ".join(seg["text"] for seg in segments).strip()
         return Transcript(
             item_id=item.id,
             title=item.title,
             source_name=item.source_name,
             text=text,
             provenance="faster-whisper",
+            segments=segments,
         )
 
 
@@ -182,19 +191,21 @@ class CaptionsTranscriber(Transcriber):
     needs_media = False
 
     def transcribe(self, item: MediaItem) -> Transcript:
-        text, provenance = self._fetch_captions(item)
+        text, provenance, segments = self._fetch_captions(item)
         if not text:
             text = item.summary_hint.strip() or item.title
             provenance = "feed"
+            segments = []
         return Transcript(
             item_id=item.id,
             title=item.title,
             source_name=item.source_name,
             text=text,
             provenance=provenance,
+            segments=segments,
         )
 
-    def _fetch_captions(self, item: MediaItem) -> tuple[str, str]:
+    def _fetch_captions(self, item: MediaItem) -> tuple[str, str, list[dict]]:
         try:
             import yt_dlp
         except ImportError as exc:  # pragma: no cover - optional dep
@@ -223,10 +234,11 @@ class CaptionsTranscriber(Transcriber):
 
             for path in sorted(Path(tmp).glob("*.vtt")):
                 content = path.read_text(encoding="utf-8", errors="ignore")
-                text = parse_subtitles(content, "vtt")
+                cues = parse_vtt_cues(content)
+                text = " ".join(cue["text"] for cue in cues)
                 if text:
-                    return text, "captions"
-        return "", "captions"
+                    return text, "captions", cues
+        return "", "captions", []
 
 
 def cached_transcribe(transcriber: Transcriber, item: MediaItem, store: Store) -> Transcript:

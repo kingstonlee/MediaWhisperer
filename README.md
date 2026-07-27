@@ -21,7 +21,7 @@ The output of a run is a set of deliverables, all built from the same digest so
 the written and spoken versions never drift apart:
 
 - **`digest-YYYY-MM-DD.md`** — a skimmable notes page, grouped by source, with a
-  short summary, highlight bullets, and topic tags per item.
+  short summary, a **Key facts** list, highlight bullets, and topic tags per item.
 - **`digest-YYYY-MM-DD.script.txt`** — a listen-ready narration script that a
   voice backend can turn into your own daily audio briefing.
 - **`digest-YYYY-MM-DD.html`** — an optional self-contained HTML page (enable
@@ -34,6 +34,37 @@ whole run into the digest's **themes** — the topics showing up in more than on
 feed. That turns a pile of separate summaries into a single answer to "what's
 the big story across everything I follow this week?", surfaced at the top of the
 notes page and the audio intro.
+
+### Keep the specifics
+
+Summaries are built to hold on to the *details*, not flatten them into a gloss.
+Sentence selection is biased toward concrete specifics — numbers, dates, prices,
+names, quotes — and every item also gets an explicit **Key facts** list that
+pulls out those detail-bearing statements, so nothing important is lost in
+compression. The `llm` summarizer is likewise instructed to preserve specifics
+verbatim and return its own key facts (with a deterministic fallback).
+
+### Signal over noise: cross-feed stories
+
+When several shows cover the same thing in one run, the digest clusters them
+into a single **"Top stories across your feeds"** entry — the story's key
+topics, how many sources covered it, and links to each — so you see the story
+once, with its sources, instead of five near-identical summaries.
+
+### Jump straight to the moment
+
+When a transcript has timing (Whisper, faster-whisper, or captions), every
+highlight is tagged with its **timestamp** in the episode. For YouTube that
+becomes a clickable deep link that opens the video at that exact second; for
+podcasts it's a `M:SS` marker.
+
+### Subscribe to your own briefing
+
+Turn the audio digests into a real, subscribable podcast. With `emit_feed: true`
+and an audio voice backend, each run appends an episode to a standard podcast
+RSS feed (`output/podcast/feed.xml`). Host `output_dir` on any static web
+server, point `feed.base_url` at it, and add the feed URL to your podcast app —
+your daily digest shows up like any other show.
 
 ### Swappable backends
 
