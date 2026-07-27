@@ -19,6 +19,18 @@ skip_seen: true
 # Markdown one (nice for reading in a browser).
 emit_html: false
 
+# Publish the audio digests as a subscribable podcast RSS feed. Needs an audio
+# tts backend (piper/pyttsx3/elevenlabs). Host output_dir on any static web
+# server, point base_url at it, and subscribe to <base_url>/podcast/feed.xml in
+# your podcast app to get your own daily briefing.
+emit_feed: false
+feed:
+  title: My MediaWhisperer Briefing
+  description: A personal audio digest of my podcast and video feeds.
+  author: Me
+  base_url: https://your-host.example.com/digests
+  max_episodes: 50
+
 # Which implementation to use for each swappable stage.
 # The defaults below run fully offline with no API keys and no model downloads.
 # For the recommended free, high-quality stack, see the commented block further

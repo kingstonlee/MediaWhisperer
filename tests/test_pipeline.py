@@ -95,6 +95,37 @@ def test_skip_seen_disabled_in_config(tmp_path):
     assert again.digest.item_count == 2
 
 
+def test_pipeline_emits_podcast_feed_with_audio_backend(tmp_path):
+    config = _config(tmp_path)
+    config.skip_seen = False
+    config.emit_feed = True
+    config.feed.base_url = "https://host.example.com/digests"
+
+    pipeline = Pipeline(config)
+
+    class FakeVoice:
+        suffix = ".wav"
+
+        def synthesize(self, script, dest):
+            dest.write_bytes(b"RIFF" + b"\x00" * 64)
+            return dest
+
+    pipeline.voice = FakeVoice()
+    result = pipeline.run()
+
+    assert result.feed_path is not None and result.feed_path.exists()
+    feed_xml = (tmp_path / "output" / "podcast" / "feed.xml").read_text(encoding="utf-8")
+    assert "https://host.example.com/digests/" in feed_xml
+    assert "<enclosure" in feed_xml
+
+
+def test_pipeline_skips_feed_when_backend_has_no_audio(tmp_path):
+    config = _config(tmp_path)  # tts=script -> .txt, not audio
+    config.emit_feed = True
+    result = Pipeline(config).run()
+    assert result.feed_path is None
+
+
 def test_per_source_transcriber_override(tmp_path):
     from mediawhisperer.models import Source, SourceKind
     from mediawhisperer.transform.transcribe import CaptionsTranscriber, FeedTranscriber
