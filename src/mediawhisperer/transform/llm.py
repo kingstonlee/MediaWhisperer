@@ -23,7 +23,7 @@ import json
 import os
 import re
 
-from ..models import Note, Transcript
+from ..models import Note, SourceKind, Transcript
 from .summarize import Summarizer, register
 from .topics import extract_keyphrases
 
@@ -76,6 +76,7 @@ class LLMSummarizer(Summarizer):
         published=None,
         summary_sentences: int = 3,
         highlights: int = 4,
+        item_kind: SourceKind = SourceKind.PODCAST,
     ) -> Note:
         content = self._complete(transcript, summary_sentences, highlights)
         summary, bullets = _parse_response(content, highlights)
@@ -93,6 +94,7 @@ class LLMSummarizer(Summarizer):
             highlights=bullets,
             topics=topics,
             published=published,
+            kind=item_kind,
         )
 
     def _complete(self, transcript: Transcript, summary_sentences: int, highlights: int) -> str:

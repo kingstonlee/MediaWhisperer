@@ -10,13 +10,33 @@ versions never drift apart.
 
 from __future__ import annotations
 
-from ..models import Digest, Note
+from ..models import Digest, Note, SourceKind
+from ..transform.timing import format_timestamp
 from ..transform.topics import top_themes
 
 
 def digest_themes(digest: Digest, limit: int = 5) -> list[str]:
     """The dominant themes across every item in the digest."""
     return top_themes([note.topics for note in digest.notes], limit=limit)
+
+
+def deep_link(note: Note, seconds: float) -> str | None:
+    """A URL that jumps to ``seconds`` in the item, when the platform supports it.
+
+    YouTube honours a ``t=<seconds>s`` query param; most podcast episode pages
+    don't, so those get a plain timestamp label instead (None here).
+    """
+    if note.kind is SourceKind.YOUTUBE and note.url:
+        sep = "&" if "?" in note.url else "?"
+        return f"{note.url}{sep}t={int(seconds)}s"
+    return None
+
+
+def _highlight_times(note: Note) -> list[float | None]:
+    """Highlight start-times aligned with ``note.highlights`` (padded with None)."""
+    times = list(note.highlight_times)
+    times += [None] * (len(note.highlights) - len(times))
+    return times
 
 
 def render_markdown(digest: Digest) -> str:
@@ -45,8 +65,13 @@ def render_markdown(digest: Digest) -> str:
             if note.highlights:
                 lines.append("")
                 lines.append("**Highlights**")
-                for bullet in note.highlights:
-                    lines.append(f"- {bullet}")
+                for bullet, seconds in zip(note.highlights, _highlight_times(note)):
+                    stamp = ""
+                    if seconds is not None:
+                        label = format_timestamp(seconds)
+                        link = deep_link(note, seconds)
+                        stamp = f" [[{label}]({link})]" if link else f" _[{label}]_"
+                    lines.append(f"- {bullet}{stamp}")
             if note.topics:
                 lines.append("")
                 lines.append("_Topics: " + ", ".join(note.topics) + "_")
@@ -125,8 +150,18 @@ def render_html(digest: Digest) -> str:
                 out.append(f'<p class="pub">{note.published.strftime("%b %-d, %Y")}</p>')
             out.append(f"<p>{_html.escape(note.summary)}</p>")
             if note.highlights:
-                bullets = "".join(f"<li>{_html.escape(h)}</li>" for h in note.highlights)
-                out.append(f"<ul>{bullets}</ul>")
+                items = []
+                for bullet, seconds in zip(note.highlights, _highlight_times(note)):
+                    stamp = ""
+                    if seconds is not None:
+                        label = _html.escape(format_timestamp(seconds))
+                        link = deep_link(note, seconds)
+                        if link:
+                            stamp = f' <a class="ts" href="{_html.escape(link)}">{label}</a>'
+                        else:
+                            stamp = f' <span class="ts">{label}</span>'
+                    items.append(f"<li>{_html.escape(bullet)}{stamp}</li>")
+                out.append(f"<ul>{''.join(items)}</ul>")
             if note.topics:
                 tags = "".join(
                     f'<span class="tag">{_html.escape(t)}</span>' for t in note.topics
@@ -162,6 +197,8 @@ h3 a { color: inherit; text-decoration: none; border-bottom: 2px solid color-mix
 .pub { margin: 0 0 .5rem; font-size: .85rem; opacity: .6; }
 ul { margin: .5rem 0; padding-left: 1.2rem; }
 li { margin: .2rem 0; }
+.ts { font-variant-numeric: tabular-nums; font-size: .8rem; opacity: .7; white-space: nowrap; }
+a.ts { text-decoration: none; border-bottom: 1px dotted currentColor; }
 .tags { margin: .6rem 0 0; }
 .tag { display: inline-block; margin: 0 .3rem .3rem 0; padding: .1rem .5rem; font-size: .78rem;
        border-radius: .4rem; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); opacity: .8; }

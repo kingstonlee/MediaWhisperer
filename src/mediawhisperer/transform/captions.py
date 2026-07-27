@@ -23,26 +23,60 @@ _VTT_TIMING = re.compile(r"^\d{2}:\d{2}:\d{2}[.,]\d{3}\s*-->")
 _SRT_INDEX = re.compile(r"^\d+$")
 _INLINE_TAG = re.compile(r"<[^>]+>")          # <c>, </c>, <00:00:01.500>
 _TIMESTAMP_ANY = re.compile(r"\d{2}:\d{2}:\d{2}[.,]\d{3}")
+_CUE_START = re.compile(r"^(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->")
+
+
+def parse_vtt_cues(content: str) -> list[dict]:
+    """Parse WebVTT into de-duplicated timed cues: ``[{"start", "text"}, ...]``.
+
+    ``start`` is seconds from the beginning of the media. This is the timed
+    counterpart of :func:`parse_vtt`, used to attach timestamps to highlights.
+    """
+    raw_cues: list[tuple[float, str]] = []
+    current_start: float | None = None
+    buffer: list[str] = []
+
+    def flush():
+        # Emit one timed unit per caption *line* (not per cue): rolling captions
+        # spread "previous line + new words" across lines, and per-line dedup is
+        # what removes that noise. Each line inherits its cue's start time.
+        if current_start is None:
+            return
+        for line in buffer:
+            text = _INLINE_TAG.sub("", line)
+            text = _TIMESTAMP_ANY.sub("", text).strip()
+            text = re.sub(r"\s+", " ", text)
+            if text:
+                raw_cues.append((current_start, text))
+
+    for raw in content.splitlines():
+        line = raw.strip()
+        if not line:
+            flush()
+            current_start, buffer = None, []
+            continue
+        if line.upper().startswith("WEBVTT") or line.startswith(
+            ("NOTE", "STYLE", "REGION", "Kind:", "Language:")
+        ):
+            continue
+        match = _CUE_START.match(line)
+        if match:
+            flush()
+            hh, mm, ss, ms = (int(g) for g in match.groups())
+            current_start = hh * 3600 + mm * 60 + ss + ms / 1000.0
+            buffer = []
+            continue
+        if "-->" in line:
+            continue
+        buffer.append(line)
+    flush()
+
+    return _dedup_cues(raw_cues)
 
 
 def parse_vtt(content: str) -> str:
     """Turn WebVTT caption text into de-duplicated prose."""
-    lines: list[str] = []
-    for raw in content.splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        if line.upper().startswith("WEBVTT"):
-            continue
-        if line.startswith(("NOTE", "STYLE", "REGION", "Kind:", "Language:")):
-            continue
-        if _VTT_TIMING.match(line) or "-->" in line:
-            continue
-        text = _INLINE_TAG.sub("", line)
-        text = _TIMESTAMP_ANY.sub("", text).strip()
-        if text:
-            lines.append(text)
-    return _join_dedup(lines)
+    return " ".join(cue["text"] for cue in parse_vtt_cues(content))
 
 
 def parse_srt(content: str) -> str:
@@ -64,6 +98,29 @@ def parse_srt(content: str) -> str:
 
 def parse_subtitles(content: str, fmt: str = "vtt") -> str:
     return parse_srt(content) if fmt.lower() == "srt" else parse_vtt(content)
+
+
+def _dedup_cues(cues: list[tuple[float, str]]) -> list[dict]:
+    """Drop consecutive duplicate/extension cues, keeping the earliest start.
+
+    Rolling captions emit the same phrase many times as it scrolls; collapsing
+    consecutive duplicates removes that noise. When a cue merely extends the
+    previous one word-for-word, we keep the longer text but the earlier start.
+    """
+    cleaned: list[dict] = []
+    previous = None
+    for start, text in cues:
+        normalized = text.lower()
+        if normalized == previous:
+            continue
+        if previous is not None and normalized.startswith(previous + " "):
+            # Extend the text in place but retain the earlier cue's start time.
+            cleaned[-1]["text"] = text
+            previous = normalized
+            continue
+        cleaned.append({"start": start, "text": text})
+        previous = normalized
+    return cleaned
 
 
 def _join_dedup(lines: list[str]) -> str:

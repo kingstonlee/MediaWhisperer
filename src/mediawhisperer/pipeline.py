@@ -113,6 +113,7 @@ class Pipeline:
             published=item.published,
             summary_sentences=self.config.summary_sentences,
             highlights=self.config.highlights_per_item,
+            item_kind=item.kind,
         )
 
     def _render(self, digest: Digest) -> RunResult:

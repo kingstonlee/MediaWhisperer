@@ -22,8 +22,9 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 
-from ..models import Note, Transcript
+from ..models import Note, SourceKind, Transcript
 from .lexicon import STOPWORDS as _STOPWORDS
+from .timing import locate_time
 from .topics import extract_keyphrases
 
 _REGISTRY: dict[str, type["Summarizer"]] = {}
@@ -56,6 +57,7 @@ class Summarizer(ABC):
         published=None,
         summary_sentences: int = 3,
         highlights: int = 4,
+        item_kind: SourceKind = SourceKind.PODCAST,
     ) -> Note:
         ...
 
@@ -82,6 +84,7 @@ class ExtractiveSummarizer(Summarizer):
         published=None,
         summary_sentences: int = 3,
         highlights: int = 4,
+        item_kind: SourceKind = SourceKind.PODCAST,
     ) -> Note:
         sentences = split_sentences(transcript.text)
         topics = extract_keyphrases(transcript.text, self.options.get("topics_per_item", 5))
@@ -98,6 +101,7 @@ class ExtractiveSummarizer(Summarizer):
                 highlights=[],
                 topics=topics,
                 published=published,
+                kind=item_kind,
             )
 
         scores = self._score_sentences(sentences)
@@ -109,18 +113,24 @@ class ExtractiveSummarizer(Summarizer):
 
         # Highlights: the next tier, trimmed into short bullets, no overlap with
         # sentences already in the summary.
-        highlight_idx = [i for i in ranked if i not in set(chosen)][:highlights]
-        bullets = [_to_bullet(sentences[i]) for i in sorted(highlight_idx)]
+        highlight_idx = sorted(i for i in ranked if i not in set(chosen))[:highlights]
+        bullets = [_to_bullet(sentences[i]) for i in highlight_idx]
+        # Timestamp each highlight from the transcript's segments (if any). We
+        # locate on the full sentence, not the trimmed bullet, for a better match.
+        times = [locate_time(transcript.segments, sentences[i]) for i in highlight_idx]
 
+        pairs = [(b, t) for b, t in zip(bullets, times) if b]
         return Note(
             item_id=transcript.item_id,
             title=transcript.title,
             source_name=transcript.source_name,
             url=item_url,
             summary=summary,
-            highlights=[b for b in bullets if b],
+            highlights=[b for b, _ in pairs],
+            highlight_times=[t for _, t in pairs],
             topics=topics,
             published=published,
+            kind=item_kind,
         )
 
     def _score_sentences(self, sentences: list[str]) -> list[float]:
